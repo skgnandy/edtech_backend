@@ -73,16 +73,27 @@
       "maxLength": 10
     },
     "firstName": {
-      "type": "string"
+      "type": "string",
+      "required": true
     },
     "lastName": {
-      "type": "string"
+      "type": "string",
+      "required": true
     },
     "resetCode": {
       "type": "string"
     },
     "expiryTime": {
       "type": "biginteger"
+    },
+    "blogs": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::blog.blog",
+      "mappedBy": "user"
+    },
+    "isAdmin": {
+      "type": "boolean"
     }
   }
 }

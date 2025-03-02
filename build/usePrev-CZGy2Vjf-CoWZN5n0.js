@@ -1,0 +1,1 @@
+import{r}from"./strapi-4h7MLEfG.js";const o=e=>e&&e.startsWith("/")?`${window.strapi.backendURL}${e}`:e;function a(e,t){const[s,n]=r.useState(e);return r.useEffect(()=>{const u=setTimeout(()=>{n(e)},t);return()=>{clearTimeout(u)}},[e,t]),s}const i=e=>{const t=r.useRef();return r.useEffect(()=>{t.current=e},[e]),t.current};export{a,o as p,i as u};

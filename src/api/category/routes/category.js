@@ -6,4 +6,10 @@
 
 const { createCoreRouter } = require('@strapi/strapi').factories;
 
-module.exports = createCoreRouter('api::category.category');
+module.exports = createCoreRouter('api::category.category', {
+    config: {
+        create: {
+            policies: ["is-admin-user"],
+        },
+    },
+});

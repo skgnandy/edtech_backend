@@ -1,4 +1,4 @@
-const api_key = "local-order";
+const api_key = "blog";
 
 const utils = require("@strapi/utils");
 const { UnauthorizedError, ApplicationError } = utils.errors;

@@ -1,6 +1,6 @@
 module.exports = {
   responses: {
-    privateAttributes: ['publishedAt', 'createdAt', 'updatedAt'],
+    privateAttributes: ['publishedAt', 'createdAt', 'updatedAt', 'provider'],
   },
   rest: {
     prefix: '/v1',

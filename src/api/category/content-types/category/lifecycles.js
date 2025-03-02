@@ -9,8 +9,5 @@ module.exports = {
         if (!ctx.state.user) {
             throw new UnauthorizedError("User not found!");
         }
-        if (!ctx.state.user.isAdmin) {
-            throw new ApplicationError("You must be an admin to create category!");
-        }
     },
 };

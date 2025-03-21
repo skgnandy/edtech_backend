@@ -38,7 +38,7 @@ jobs:
       - name: Generate deployment package
         run: |
           mkdir -p deployment
-          cp -r dist config build public package.json package-lock.json .env.example deployment/
+          cp -r build config public package.json package-lock.json .env.example deployment/
           cd deployment && tar -czf ../deployment.tar.gz .
           
       - name: Configure SSH

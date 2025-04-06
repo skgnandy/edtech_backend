@@ -1,0 +1,13 @@
+{
+  "collectionName": "components_general_options",
+  "info": {
+    "displayName": "Option",
+    "icon": "apps"
+  },
+  "options": {},
+  "attributes": {
+    "name": {
+      "type": "string"
+    }
+  }
+}

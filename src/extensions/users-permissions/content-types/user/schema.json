@@ -94,6 +94,12 @@
     },
     "isAdmin": {
       "type": "boolean"
+    },
+    "blog_comments": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::blog-comment.blog-comment",
+      "mappedBy": "user"
     }
   }
 }

@@ -1,4 +1,4 @@
-const api_key = "blog";
+const api_key = "blog-comment";
 
 const utils = require("@strapi/utils");
 const { UnauthorizedError, ApplicationError } = utils.errors;

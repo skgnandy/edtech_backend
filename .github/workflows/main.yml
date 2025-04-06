@@ -1,10 +1,8 @@
 name: Deploy Strapi to EC2
-
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
-
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -38,7 +36,8 @@ jobs:
       - name: Generate deployment package
         run: |
           mkdir -p deployment
-          cp -r build config public package.json package-lock.json .env.example deployment/
+          # Include database directory and src directory
+          cp -r build config database public src package.json package-lock.json .env.example deployment/
           cd deployment && tar -czf ../deployment.tar.gz .
           
       - name: Configure SSH
@@ -61,15 +60,32 @@ jobs:
             mkdir -p ~/backups
             tar -czf ~/backups/edtech_backend-backup-$timestamp.tar.gz ~/edtech_backend --exclude=node_modules
             
-            # Clear the current build files but keep the .env file
+            # Backup important files
             cp ~/edtech_backend/.env ~/edtech_env_backup
-            rm -rf ~/edtech_backend/build ~/edtech_backend/dist ~/edtech_backend/config ~/edtech_backend/public
+            # Also backup database config if it exists separately
+            if [ -d ~/edtech_backend/config/database ]; then
+              mkdir -p ~/database_config_backup
+              cp -r ~/edtech_backend/config/database ~/database_config_backup
+            fi
             
-            # Extract the new deployment
-            tar -xzf ~/deployment.tar.gz -C ~/edtech_backend
+            # Create a temporary directory for extraction
+            mkdir -p ~/edtech_temp
+            tar -xzf ~/deployment.tar.gz -C ~/edtech_temp
+            
+            # Clear the current build files but preserve specific directories
+            rm -rf ~/edtech_backend/build ~/edtech_backend/config ~/edtech_backend/public
+            
+            # Copy new files
+            cp -r ~/edtech_temp/* ~/edtech_backend/
             
             # Restore the .env file
             cp ~/edtech_env_backup ~/edtech_backend/.env
+            
+            # Restore database config if it was backed up
+            if [ -d ~/database_config_backup ]; then
+              mkdir -p ~/edtech_backend/config/
+              cp -r ~/database_config_backup/* ~/edtech_backend/config/database/
+            fi
             
             # Install production dependencies
             cd ~/edtech_backend
@@ -78,13 +94,19 @@ jobs:
             # Restart Strapi with PM2
             pm2 restart strapi || pm2 start npm --name "strapi" -- run start
             
+            # Show logs to help with debugging
+            echo "Showing Strapi logs for debugging:"
+            sleep 10
+            pm2 logs strapi --lines 20 --nostream
+            
             # Clean up
             rm ~/deployment.tar.gz
             rm ~/edtech_env_backup
+            rm -rf ~/database_config_backup
+            rm -rf ~/edtech_temp
             
             # Validate deployment
             echo "Deployment completed. Checking Strapi status..."
-            sleep 5
             pm2 status
           EOF
           
@@ -92,5 +114,5 @@ jobs:
         run: |
           echo "Waiting for application to start..."
           sleep 60
-          curl -sSf -o /dev/null https://api.explored.co.in || (echo "Deployment verification failed" && exit 1)
+          curl -v https://api.explored.co.in || (echo "Deployment verification failed" && exit 1)
           echo "Deployment verified successfully!"

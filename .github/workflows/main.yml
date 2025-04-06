@@ -91,6 +91,6 @@ jobs:
       - name: Verify deployment
         run: |
           echo "Waiting for application to start..."
-          sleep 10
+          sleep 60
           curl -sSf -o /dev/null https://api.explored.co.in || (echo "Deployment verification failed" && exit 1)
           echo "Deployment verified successfully!"

@@ -4,6 +4,71 @@ const { sanitize } = utils;
 const { ApplicationError, ValidationError } = utils.errors;
 'use strict';
 module.exports = (plugin) => {
+  plugin.controllers.user.signIn = async (ctx) => {
+    try {
+      const { email, password } = ctx.request.body;
+
+      if (!email || !password) {
+        return ctx.badRequest("Email and password are required");
+      }
+
+      // Find user by email
+      const user = await strapi.db
+        .query("plugin::users-permissions.user")
+        .findOne({
+          where: {
+            email: email.toLowerCase(),
+          },
+        });
+
+      if (!user) {
+        return ctx.badRequest("No user found with this email");
+      }
+
+      // Check if user is active and not blocked
+      if (!user.confirmed) {
+        return ctx.badRequest("Your account email is not confirmed");
+      }
+
+      if (user.blocked) {
+        return ctx.badRequest("Your account has been blocked by an administrator");
+      }
+
+      // Validate password
+      const validPassword = await strapi.plugins['users-permissions'].services.user.validatePassword(
+        password,
+        user.password
+      );
+
+      if (!validPassword) {
+        return ctx.badRequest("Invalid password");
+      }
+
+      // Generate JWT token
+      const jwt = strapi.plugins['users-permissions'].services.jwt.issue({
+        id: user.id,
+      });
+
+      // Create a sanitized user object with all fields except password
+      const sanitizedUser = { ...user };
+      delete sanitizedUser.password; // Remove password field for security
+
+      // Remove sensitive security fields
+      delete sanitizedUser.resetPasswordToken;
+      delete sanitizedUser.confirmationToken;
+
+      // Return user and token
+      ctx.send({
+        jwt,
+        user: sanitizedUser,
+      });
+    } catch (err) {
+      console.error("Sign-in error:", err);
+      return ctx.internalServerError("Something went wrong. Please try again.");
+    }
+  };
+
+
 
   plugin.controllers.user.Forgotpassword = async (ctx) => {
     try {
@@ -105,6 +170,15 @@ module.exports = (plugin) => {
   };
 
   plugin.routes['content-api'].routes.push(
+    {
+      method: 'POST',
+      path: '/auth/sign-in',
+      handler: 'user.signIn',
+      config: {
+        prefix: "",
+        auth: false,
+      },
+    },
     {
       method: 'POST',
       path: '/auth/forgot--password',

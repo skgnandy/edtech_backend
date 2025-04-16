@@ -19,9 +19,11 @@ module.exports = createCoreRouter('api::blog.blog', {
         },
         update: {
             middlewares: ["api::blog.populate"],
+            policies: ["is-owner"],
         },
         delete: {
             middlewares: ["api::blog.populate"],
+            policies: ["is-owner"],
         },
     },
 });

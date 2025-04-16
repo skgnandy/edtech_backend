@@ -25,6 +25,12 @@
     },
     "correct_answer_index": {
       "type": "integer"
+    },
+    "video": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::video.video",
+      "inversedBy": "quizzes"
     }
   }
 }

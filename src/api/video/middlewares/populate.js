@@ -8,17 +8,9 @@ module.exports = (config, { strapi }) => {
   // Add your own logic here.
   return async (ctx, next) => {
     ctx.query.populate = {
-      options: {
-        fields: ["name"],
+      subject: {
+        fields: ["name", "Description"],
       },
-      video: {
-        fields: ["documentId"],
-        // populate: {
-        //   subject: {
-        //     fields: ["name", "Description"],
-        //   },
-        // }
-      }
     };
     await next();
   };

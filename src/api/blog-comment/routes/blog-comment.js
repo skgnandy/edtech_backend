@@ -19,9 +19,11 @@ module.exports = createCoreRouter('api::blog-comment.blog-comment', {
         },
         update: {
             middlewares: ["api::blog-comment.populate"],
+            policies: ["is-owner"],
         },
         delete: {
             middlewares: ["api::blog-comment.populate"],
+            policies: ["is-owner"],
         },
     },
 });

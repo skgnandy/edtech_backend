@@ -100,6 +100,12 @@
       "relation": "oneToMany",
       "target": "api::blog-comment.blog-comment",
       "mappedBy": "user"
+    },
+    "quiz_progresses": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::quiz-progress.quiz-progress",
+      "mappedBy": "user"
     }
   }
 }

@@ -1205,6 +1205,7 @@ export interface PluginUsersPermissionsUser
         minLength: 6;
       }>;
     expiryTime: Schema.Attribute.BigInteger;
+    feedback: Schema.Attribute.JSON;
     firstName: Schema.Attribute.String & Schema.Attribute.Required;
     isAdmin: Schema.Attribute.Boolean;
     lastName: Schema.Attribute.String & Schema.Attribute.Required;

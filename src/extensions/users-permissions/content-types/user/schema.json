@@ -106,6 +106,9 @@
       "relation": "oneToMany",
       "target": "api::quiz-progress.quiz-progress",
       "mappedBy": "user"
+    },
+    "feedback": {
+      "type": "json"
     }
   }
 }

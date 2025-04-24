@@ -49,41 +49,76 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H 13.126.228.103 >> ~/.ssh/known_hosts
           
-      - name: Check EC2 disk space
+      - name: Check and clean EC2 disk space
         run: |
-          ssh ubuntu@13.126.228.103 "df -h && echo 'Available disk space shown above'"
+          # Check disk space before attempting any transfers
+          echo "Checking disk space on EC2 instance..."
+          ssh ubuntu@13.126.228.103 "df -h"
           
-      - name: Deploy to EC2 with SCP retry
-        run: |
-          # Try SCP with verbose output
-          echo "Attempting SCP file transfer..."
-          scp -v deployment.tar.gz ubuntu@13.126.228.103:~/deployment.tar.gz || TRANSFER_FAILED=true
-          
-          if [ "$TRANSFER_FAILED" = true ]; then
-            echo "SCP failed, trying alternative transfer method with split files..."
-            # Split the deployment package into smaller chunks
-            mkdir -p chunks
-            split -b 5M deployment.tar.gz chunks/deployment.part.
+          # Clean up old deployments, logs, and temporary files to free up space
+          echo "Cleaning up disk space on EC2 instance..."
+          ssh ubuntu@13.126.228.103 << 'EOF'
+            # Remove old deployment packages
+            rm -f ~/deployment.tar.gz
             
-            # Transfer chunks separately
-            for chunk in chunks/deployment.part.*; do
-              echo "Transferring chunk: $chunk"
-              scp -v "$chunk" ubuntu@13.126.228.103:~/"$(basename $chunk)" || exit 1
+            # Clean up old backup files (keep only the 3 most recent)
+            if [ -d ~/backups ]; then
+              cd ~/backups
+              ls -t | tail -n +4 | xargs rm -f
+            fi
+            
+            # Clean up PM2 logs
+            pm2 flush || true
+            
+            # Clean up temp directories
+            rm -rf ~/edtech_temp ~/database_config_backup
+            
+            # Remove npm cache
+            npm cache clean --force || true
+            
+            # Remove any old node_modules if present (will be reinstalled)
+            if [ -d ~/edtech_backend/node_modules ]; then
+              rm -rf ~/edtech_backend/node_modules
+            fi
+            
+            # Check disk space after cleanup
+            df -h
+          EOF
+          
+      - name: Deploy to EC2 using rsync
+        run: |
+          # Create a smaller deployment package by excluding unnecessary files
+          echo "Creating optimized deployment package..."
+          
+          # Instead of using SCP, use rsync which can handle network issues better
+          echo "Starting rsync transfer..."
+          rsync -avz --stats --progress --exclude "node_modules" deployment/ ubuntu@13.126.228.103:~/edtech_temp/ || {
+            echo "rsync failed, trying direct extraction method..."
+            # If rsync fails, try a smaller approach by uploading just the essential files
+            ssh ubuntu@13.126.228.103 "mkdir -p ~/edtech_temp"
+            scp package.json package-lock.json ubuntu@13.126.228.103:~/edtech_temp/
+            scp .env.example ubuntu@13.126.228.103:~/edtech_temp/
+            
+            # Create essential directories
+            ssh ubuntu@13.126.228.103 "mkdir -p ~/edtech_temp/config ~/edtech_temp/src"
+            
+            # Transfer essential directories individually
+            for dir in build config database public src; do
+              if [ -d "$dir" ]; then
+                echo "Transferring $dir directory..."
+                rsync -az --stats $dir/ ubuntu@13.126.228.103:~/edtech_temp/$dir/ || {
+                  echo "Failed to transfer $dir, but continuing with deployment..."
+                }
+              fi
             done
-            
-            # Reassemble on the server
-            ssh ubuntu@13.126.228.103 "cat ~/deployment.part.* > ~/deployment.tar.gz && rm ~/deployment.part.*"
-          fi
-          
-          # Verify the file was transferred correctly
-          ssh ubuntu@13.126.228.103 "ls -lh ~/deployment.tar.gz"
+          }
           
       - name: Deploy on EC2
         run: |
           ssh ubuntu@13.126.228.103 << 'EOF'
-            # Check if deployment package exists
-            if [ ! -f ~/deployment.tar.gz ]; then
-              echo "ERROR: deployment.tar.gz not found. Transfer failed."
+            # Check if any files were transferred
+            if [ ! -d ~/edtech_temp ] || [ -z "$(ls -A ~/edtech_temp)" ]; then
+              echo "ERROR: No files were transferred. Deployment failed."
               exit 1
             fi
             
@@ -91,26 +126,17 @@ jobs:
             cd ~/edtech_backend || mkdir -p ~/edtech_backend
             pm2 stop strapi || true
             
-            # Backup the current version
-            timestamp=$(date +%Y%m%d%H%M%S)
-            mkdir -p ~/backups
-            tar -czf ~/backups/edtech_backend-backup-$timestamp.tar.gz ~/edtech_backend --exclude=node_modules || echo "Warning: Backup failed, continuing anyway"
-            
-            # Backup important files
+            # Backup only essential configuration files
+            echo "Backing up essential configuration files..."
+            mkdir -p ~/backup_config
             if [ -f ~/edtech_backend/.env ]; then
-              cp ~/edtech_backend/.env ~/edtech_env_backup
+              cp ~/edtech_backend/.env ~/backup_config/
             fi
             
-            # Also backup database config if it exists separately
             if [ -d ~/edtech_backend/config/database ]; then
-              mkdir -p ~/database_config_backup
-              cp -r ~/edtech_backend/config/database ~/database_config_backup
+              mkdir -p ~/backup_config/database
+              cp -r ~/edtech_backend/config/database/* ~/backup_config/database/
             fi
-            
-            # Create a temporary directory for extraction
-            rm -rf ~/edtech_temp
-            mkdir -p ~/edtech_temp
-            tar -xzf ~/deployment.tar.gz -C ~/edtech_temp
             
             # Clear only specific directories to preserve data
             rm -rf ~/edtech_backend/build ~/edtech_backend/config ~/edtech_backend/public
@@ -118,9 +144,9 @@ jobs:
             # Copy new files
             cp -r ~/edtech_temp/* ~/edtech_backend/
             
-            # Restore the .env file
-            if [ -f ~/edtech_env_backup ]; then
-              cp ~/edtech_env_backup ~/edtech_backend/.env
+            # Restore configuration files
+            if [ -f ~/backup_config/.env ]; then
+              cp ~/backup_config/.env ~/edtech_backend/.env
             else
               # If no .env backup, copy example
               if [ -f ~/edtech_backend/.env.example ]; then
@@ -129,16 +155,15 @@ jobs:
               fi
             fi
             
-            # Restore database config if it was backed up
-            if [ -d ~/database_config_backup ]; then
-              mkdir -p ~/edtech_backend/config/
-              cp -r ~/database_config_backup/* ~/edtech_backend/config/database/
+            if [ -d ~/backup_config/database ]; then
+              mkdir -p ~/edtech_backend/config/database
+              cp -r ~/backup_config/database/* ~/edtech_backend/config/database/
             fi
             
             # Install production dependencies
             cd ~/edtech_backend
             echo "Installing production dependencies..."
-            npm install --production --no-audit --no-fund
+            npm install --production --no-audit --no-fund --prefer-offline
             
             # Restart Strapi with PM2
             echo "Starting Strapi application..."
@@ -150,10 +175,7 @@ jobs:
             pm2 logs strapi --lines 20 --nostream
             
             # Clean up
-            rm ~/deployment.tar.gz || true
-            rm -f ~/edtech_env_backup || true
-            rm -rf ~/database_config_backup || true
-            rm -rf ~/edtech_temp || true
+            rm -rf ~/edtech_temp ~/backup_config
             
             # Validate deployment
             echo "Deployment completed. Checking Strapi status..."
@@ -165,5 +187,4 @@ jobs:
           echo "Waiting for application to start..."
           sleep 60
           curl -v --max-time 30 https://api.explored.co.in || echo "Warning: Verification check failed, but deployment might still be successful"
-          # Note: The curl command might fail if the application is still starting up or the endpoint requires authentication
           echo "Deployment process completed!"

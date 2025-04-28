@@ -9,10 +9,15 @@ module.exports = (config, { strapi }) => {
   return async (ctx, next) => {
     ctx.query.populate = {
       subject: {
-        fields: ["name", "Description"],
+        select: ["name", "Description"],
       },
       quiz_progresses: {
-        fields: ["*"],
+        select: ["*"],
+        populate: {
+          user: {
+            select: ["id"],
+          }
+        }
       }
     };
     await next();

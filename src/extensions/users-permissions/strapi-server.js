@@ -4,6 +4,83 @@ const { sanitize } = utils;
 const { ApplicationError, ValidationError } = utils.errors;
 'use strict';
 module.exports = (plugin) => {
+  plugin.controllers.user.register = async (ctx) => {
+    try {
+      const { username, firstName, lastName, email, password } = ctx.request.body;
+
+      if (!username || !email || !password) {
+        return ctx.badRequest("Username, email, and password are required");
+      }
+
+      if (!firstName) {
+        return ctx.badRequest("First name is required");
+      }
+
+      // Check if user already exists
+      const existingUser = await strapi.db
+        .query("plugin::users-permissions.user")
+        .findOne({
+          where: {
+            $or: [
+              { email: email.toLowerCase() },
+              { username: username.toLowerCase() }
+            ]
+          },
+        });
+
+      if (existingUser) {
+        const field = existingUser.email === email.toLowerCase() ? 'email' : 'username';
+        return ctx.badRequest(`A user with this ${field} already exists`);
+      }
+
+      // Get default role for authenticated users
+      const defaultRole = await strapi
+        .query('plugin::users-permissions.role')
+        .findOne({ where: { type: 'authenticated' } });
+
+      if (!defaultRole) {
+        return ctx.badRequest('Authenticated role not found');
+      }
+
+      // Create the new user
+      const newUser = await strapi.entityService.create('plugin::users-permissions.user', {
+        data: {
+          username,
+          firstName,
+          lastName: lastName ?? '', // Include the lastName field
+          email: email.toLowerCase(),
+          password,
+          role: defaultRole.id,
+          confirmed: true, // Set to false if email confirmation is required
+          provider: 'local',
+        },
+      });
+
+      // Generate JWT token
+      const jwt = strapi.plugins['users-permissions'].services.jwt.issue({
+        id: newUser.id,
+      });
+
+      // Remove sensitive information
+      const sanitizedUser = { ...newUser };
+      delete sanitizedUser.password;
+      delete sanitizedUser.resetPasswordToken;
+      delete sanitizedUser.confirmationToken;
+
+      ctx.send({
+        jwt,
+        user: sanitizedUser,
+      });
+    } catch (err) {
+      console.error("Registration error:", err);
+
+      if (err instanceof ValidationError) {
+        return ctx.badRequest(err.message, { details: err.details });
+      }
+
+      return ctx.internalServerError("Something went wrong during registration. Please try again.");
+    }
+  };
   plugin.controllers.user.signIn = async (ctx) => {
     try {
       const { email, password } = ctx.request.body;
@@ -170,6 +247,15 @@ module.exports = (plugin) => {
   };
 
   plugin.routes['content-api'].routes.push(
+    {
+      method: 'POST',
+      path: '/auth/register',
+      handler: 'user.register',
+      config: {
+        prefix: "",
+        auth: false,
+      },
+    },
     {
       method: 'POST',
       path: '/auth/sign-in',

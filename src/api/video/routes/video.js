@@ -13,7 +13,7 @@ module.exports = createCoreRouter('api::video.video', {
             middlewares: ["api::video.populate"],
         },
         findOne: {
-            middlewares: ["api::video.populate"],
+            middlewares: ["api::video.populateone"],
         },
     },
 });

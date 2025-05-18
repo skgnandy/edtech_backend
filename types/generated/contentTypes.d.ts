@@ -1209,6 +1209,7 @@ export interface PluginUsersPermissionsUser
     feedback: Schema.Attribute.JSON;
     firstName: Schema.Attribute.String & Schema.Attribute.Required;
     isAdmin: Schema.Attribute.Boolean;
+    isPaid: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     lastName: Schema.Attribute.String & Schema.Attribute.Required;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<

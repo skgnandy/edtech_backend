@@ -109,6 +109,10 @@
     },
     "feedback": {
       "type": "json"
+    },
+    "isPaid": {
+      "type": "boolean",
+      "default": false
     }
   }
 }

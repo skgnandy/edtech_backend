@@ -144,7 +144,62 @@ module.exports = (plugin) => {
       return ctx.internalServerError("Something went wrong. Please try again.");
     }
   };
+  plugin.controllers.user.update = async (ctx) => {
+    try {
+      const { id } = ctx.params;
+      const { body } = ctx.request;
 
+      // Check if user exists
+      const userToUpdate = await strapi.entityService.findOne(
+        'plugin::users-permissions.user',
+        id
+      );
+
+      if (!userToUpdate) {
+        return ctx.notFound('User not found');
+      }
+
+      // Security check - only allow the user to update their own record or admin users
+      const user = ctx.state.user;
+      const isAdmin = user && user.role && user.role.type === 'admin';
+
+      if (!isAdmin && `${user.id}` !== `${id}`) {
+        return ctx.forbidden('You are not allowed to perform this action');
+      }
+
+      // IMPORTANT: Remove 'isPaid' field from the update request
+      // This ensures the 'isPaid' field cannot be modified through this API endpoint
+      if (body.hasOwnProperty('isPaid')) {
+        delete body.isPaid;
+      }
+
+      // Also prevent updating role if not admin
+      if (!isAdmin && body.role) {
+        delete body.role;
+      }
+
+      // Perform the update
+      const updatedUser = await strapi.entityService.update(
+        'plugin::users-permissions.user',
+        id,
+        { data: body }
+      );
+      // const sanitizedEntity = await plugin.controllers.user.sanitizeOutput(updatedUser, ctx);
+      // Sanitize the response - remove sensitive fields
+      delete updatedUser.password;
+      delete updatedUser.resetPasswordToken;
+      delete updatedUser.confirmationToken;
+
+
+      return ctx.send({
+        data: updatedUser
+      });
+
+    } catch (err) {
+      strapi.log.error('Error updating user:', err);
+      return ctx.badRequest('Error updating user profile');
+    }
+  };
 
 
   plugin.controllers.user.Forgotpassword = async (ctx) => {
@@ -264,6 +319,15 @@ module.exports = (plugin) => {
         prefix: "",
         auth: false,
       },
+    },
+    {
+      method: 'PUT',
+      path: '/users/:id',
+      handler: 'user.update',
+      config: {
+        prefix: "",
+        policies: ['global::is-authenticated']
+      }
     },
     {
       method: 'POST',

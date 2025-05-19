@@ -3,18 +3,27 @@ const _ = require("lodash");
 const { sanitize } = utils;
 const { ApplicationError, ValidationError } = utils.errors;
 'use strict';
+// Function to generate a username based on first name and random number
+function generateUsername(firstName) {
+  const randomSuffix = Math.floor(1000 + Math.random() * 9000); // Random 4-digit number
+  return `${firstName}${randomSuffix}`;
+}
+
 module.exports = (plugin) => {
   plugin.controllers.user.register = async (ctx) => {
     try {
       const { username, firstName, lastName, email, password } = ctx.request.body;
 
-      if (!username || !email || !password) {
-        return ctx.badRequest("Username, email, and password are required");
+      if (!email || !password) {
+        return ctx.badRequest("Email and password are required");
       }
 
       if (!firstName) {
         return ctx.badRequest("First name is required");
       }
+
+      // Generate username if not provided
+      let finalUsername = username || generateUsername(firstName);
 
       // Check if user already exists
       const existingUser = await strapi.db
@@ -23,14 +32,46 @@ module.exports = (plugin) => {
           where: {
             $or: [
               { email: email.toLowerCase() },
-              { username: username.toLowerCase() }
+              { username: finalUsername.toLowerCase() }
             ]
           },
         });
 
       if (existingUser) {
         const field = existingUser.email === email.toLowerCase() ? 'email' : 'username';
-        return ctx.badRequest(`A user with this ${field} already exists`);
+
+        // If username collision occurs, try to generate a new one
+        if (field === 'username' && !username) {
+          // User didn't specify a username, we generated one that collided
+          // Let's try again with a different random number
+          let newUsername;
+          let usernameExists = true;
+          let attempts = 0;
+
+          // Try up to 5 times to generate a unique username
+          while (usernameExists && attempts < 5) {
+            newUsername = generateUsername(firstName);
+            attempts++;
+
+            // Check if this username exists
+            const checkUser = await strapi.db
+              .query("plugin::users-permissions.user")
+              .findOne({
+                where: { username: newUsername.toLowerCase() }
+              });
+
+            if (!checkUser) {
+              usernameExists = false;
+              finalUsername = newUsername;
+            }
+          }
+
+          if (usernameExists) {
+            return ctx.badRequest("Could not generate a unique username. Please provide one.");
+          }
+        } else {
+          return ctx.badRequest(`A user with this ${field} already exists`);
+        }
       }
 
       // Get default role for authenticated users
@@ -42,10 +83,10 @@ module.exports = (plugin) => {
         return ctx.badRequest('Authenticated role not found');
       }
 
-      // Create the new user
+      // Create the new user with the final username (provided or generated)
       const newUser = await strapi.entityService.create('plugin::users-permissions.user', {
         data: {
-          username,
+          username: finalUsername,
           firstName,
           lastName: lastName ?? '', // Include the lastName field
           email: email.toLowerCase(),

@@ -3,7 +3,7 @@
 const fs = require('fs-extra');
 const path = require('path');
 const mime = require('mime-types');
-const { categories, authors, articles, global, about } = require('../data/data.json');
+//const { categories, authors, articles, global, about } = require('../data/data.json');
 
 async function seedExampleApp() {
   const shouldImportSeedData = await isFirstRun();
@@ -97,17 +97,17 @@ async function uploadFile(file, name) {
     });
 }
 
-// Create an entry and attach files if there are any
-async function createEntry({ model, entry }) {
-  try {
-    // Actually create the entry in Strapi
-    await strapi.documents(`api::${model}.${model}`).create({
-      data: entry,
-    });
-  } catch (error) {
-    console.error({ model, entry, error });
-  }
-}
+// // Create an entry and attach files if there are any
+// async function createEntry({ model, entry }) {
+//   try {
+//     // Actually create the entry in Strapi
+//     await strapi.documents(`api::${model}.${model}`).create({
+//       data: entry,
+//     });
+//   } catch (error) {
+//     console.error({ model, entry, error });
+//   }
+// }
 
 async function checkFileExistsBeforeUpload(files) {
   const existingFiles = [];
@@ -166,75 +166,75 @@ async function updateBlocks(blocks) {
   return updatedBlocks;
 }
 
-async function importArticles() {
-  for (const article of articles) {
-    const cover = await checkFileExistsBeforeUpload([`${article.slug}.jpg`]);
-    const updatedBlocks = await updateBlocks(article.blocks);
+// async function importArticles() {
+//   for (const article of articles) {
+//     const cover = await checkFileExistsBeforeUpload([`${article.slug}.jpg`]);
+//     const updatedBlocks = await updateBlocks(article.blocks);
 
-    await createEntry({
-      model: 'article',
-      entry: {
-        ...article,
-        cover,
-        blocks: updatedBlocks,
-        // Make sure it's not a draft
-        publishedAt: Date.now(),
-      },
-    });
-  }
-}
+//     await createEntry({
+//       model: 'article',
+//       entry: {
+//         ...article,
+//         cover,
+//         blocks: updatedBlocks,
+//         // Make sure it's not a draft
+//         publishedAt: Date.now(),
+//       },
+//     });
+//   }
+// }
 
-async function importGlobal() {
-  const favicon = await checkFileExistsBeforeUpload(['favicon.png']);
-  const shareImage = await checkFileExistsBeforeUpload(['default-image.png']);
-  return createEntry({
-    model: 'global',
-    entry: {
-      ...global,
-      favicon,
-      // Make sure it's not a draft
-      publishedAt: Date.now(),
-      defaultSeo: {
-        ...global.defaultSeo,
-        shareImage,
-      },
-    },
-  });
-}
+// async function importGlobal() {
+//   const favicon = await checkFileExistsBeforeUpload(['favicon.png']);
+//   const shareImage = await checkFileExistsBeforeUpload(['default-image.png']);
+//   return createEntry({
+//     model: 'global',
+//     entry: {
+//       ...global,
+//       favicon,
+//       // Make sure it's not a draft
+//       publishedAt: Date.now(),
+//       defaultSeo: {
+//         ...global.defaultSeo,
+//         shareImage,
+//       },
+//     },
+//   });
+// }
 
-async function importAbout() {
-  const updatedBlocks = await updateBlocks(about.blocks);
+// async function importAbout() {
+//   const updatedBlocks = await updateBlocks(about.blocks);
 
-  await createEntry({
-    model: 'about',
-    entry: {
-      ...about,
-      blocks: updatedBlocks,
-      // Make sure it's not a draft
-      publishedAt: Date.now(),
-    },
-  });
-}
+//   await createEntry({
+//     model: 'about',
+//     entry: {
+//       ...about,
+//       blocks: updatedBlocks,
+//       // Make sure it's not a draft
+//       publishedAt: Date.now(),
+//     },
+//   });
+// }
 
-async function importCategories() {
-  for (const category of categories) {
-    await createEntry({ model: 'category', entry: category });
-  }
-}
+// async function importCategories() {
+//   for (const category of categories) {
+//     await createEntry({ model: 'category', entry: category });
+//   }
+// }
 
-async function importAuthors() {
-  for (const author of authors) {
-    const avatar = await checkFileExistsBeforeUpload([author.avatar]);
+// async function importAuthors() {
+//   for (const author of authors) {
+//     const avatar = await checkFileExistsBeforeUpload([author.avatar]);
 
-    await createEntry({
-      model: 'author',
-      entry: {
-        ...author,
-        avatar,
-      },
-    });
-  }
-}
+//     await createEntry({
+//       model: 'author',
+//       entry: {
+//         ...author,
+//         avatar,
+//       },
+//     });
+//   }
+// }
 
 async function importSeedData() {
   // Allow read of application content types
@@ -246,12 +246,12 @@ async function importSeedData() {
     about: ['find', 'findOne'],
   });
 
-  // Create all entries
-  await importCategories();
-  await importAuthors();
-  await importArticles();
-  await importGlobal();
-  await importAbout();
+  // // Create all entries
+  // await importCategories();
+  // await importAuthors();
+  // await importArticles();
+  // await importGlobal();
+  // await importAbout();
 }
 
 async function main() {

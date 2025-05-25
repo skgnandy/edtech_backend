@@ -113,6 +113,20 @@
     "isPaid": {
       "type": "boolean",
       "default": false
+    },
+    "whatCourseDoYouNeed": {
+      "type": "string"
+    },
+    "wouldDoYouDo": {
+      "type": "string"
+    },
+    "doYouNeedACareerCounselling": {
+      "type": "boolean",
+      "default": false
+    },
+    "wouldYouLikeToBeACareerCounsellor": {
+      "type": "boolean",
+      "default": false
     }
   }
 }

@@ -1200,6 +1200,8 @@ export interface PluginUsersPermissionsUser
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    doYouNeedACareerCounselling: Schema.Attribute.Boolean &
+      Schema.Attribute.DefaultTo<false>;
     email: Schema.Attribute.Email &
       Schema.Attribute.Required &
       Schema.Attribute.SetMinMaxLength<{
@@ -1248,6 +1250,10 @@ export interface PluginUsersPermissionsUser
       Schema.Attribute.SetMinMaxLength<{
         minLength: 3;
       }>;
+    whatCourseDoYouNeed: Schema.Attribute.String;
+    wouldDoYouDo: Schema.Attribute.String;
+    wouldYouLikeToBeACareerCounsellor: Schema.Attribute.Boolean &
+      Schema.Attribute.DefaultTo<false>;
   };
 }
 

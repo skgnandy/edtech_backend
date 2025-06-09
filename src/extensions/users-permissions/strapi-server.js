@@ -233,7 +233,7 @@ module.exports = (plugin) => {
 
 
       return ctx.send({
-        data: updatedUser
+        user: updatedUser
       });
 
     } catch (err) {

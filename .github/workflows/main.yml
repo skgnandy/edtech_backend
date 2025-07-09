@@ -47,17 +47,17 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H 13.126.228.103 >> ~/.ssh/known_hosts
+          ssh-keyscan -H 172.31.0.103 >> ~/.ssh/known_hosts
           
       - name: Check and clean EC2 disk space
         run: |
           # Check disk space before attempting any transfers
           echo "Checking disk space on EC2 instance..."
-          ssh ubuntu@13.126.228.103 "df -h"
+          ssh ubuntu@172.31.0.103 "df -h"
           
           # Clean up old deployments, logs, and temporary files to free up space
           echo "Cleaning up disk space on EC2 instance..."
-          ssh ubuntu@13.126.228.103 << 'EOF'
+          ssh ubuntu@172.31.0.103 << 'EOF'
             # Remove old deployment packages
             rm -f ~/deployment.tar.gz
             
@@ -92,21 +92,21 @@ jobs:
           
           # Instead of using SCP, use rsync which can handle network issues better
           echo "Starting rsync transfer..."
-          rsync -avz --stats --progress --exclude "node_modules" deployment/ ubuntu@13.126.228.103:~/edtech_temp/ || {
+          rsync -avz --stats --progress --exclude "node_modules" deployment/ ubuntu@172.31.0.103:~/edtech_temp/ || {
             echo "rsync failed, trying direct extraction method..."
             # If rsync fails, try a smaller approach by uploading just the essential files
-            ssh ubuntu@13.126.228.103 "mkdir -p ~/edtech_temp"
-            scp package.json package-lock.json ubuntu@13.126.228.103:~/edtech_temp/
-            scp .env.example ubuntu@13.126.228.103:~/edtech_temp/
+            ssh ubuntu@172.31.0.103 "mkdir -p ~/edtech_temp"
+            scp package.json package-lock.json ubuntu@172.31.0.103:~/edtech_temp/
+            scp .env.example ubuntu@172.31.0.103:~/edtech_temp/
             
             # Create essential directories
-            ssh ubuntu@13.126.228.103 "mkdir -p ~/edtech_temp/config ~/edtech_temp/src"
+            ssh ubuntu@172.31.0.103 "mkdir -p ~/edtech_temp/config ~/edtech_temp/src"
             
             # Transfer essential directories individually
             for dir in build config database public src; do
               if [ -d "$dir" ]; then
                 echo "Transferring $dir directory..."
-                rsync -az --stats $dir/ ubuntu@13.126.228.103:~/edtech_temp/$dir/ || {
+                rsync -az --stats $dir/ ubuntu@172.31.0.103:~/edtech_temp/$dir/ || {
                   echo "Failed to transfer $dir, but continuing with deployment..."
                 }
               fi
@@ -115,7 +115,7 @@ jobs:
           
       - name: Deploy on EC2
         run: |
-          ssh ubuntu@13.126.228.103 << 'EOF'
+          ssh ubuntu@172.31.0.103 << 'EOF'
             # Check if any files were transferred
             if [ ! -d ~/edtech_temp ] || [ -z "$(ls -A ~/edtech_temp)" ]; then
               echo "ERROR: No files were transferred. Deployment failed."

@@ -6,10 +6,15 @@ module.exports = {
     async beforeCreate(event) {
         const { data } = event.params;
         const ctx = strapi.requestContext.get();
+        console.log(">>>>>user", ctx.state.user);
         if (!ctx.state.user) {
             throw new UnauthorizedError("User not found!");
         }
-        data.user = ctx.state.user.id;
+        //check user role type if autheniticated
+        if (ctx.state.user.role?.type === "authenticated") {
+            data.user = ctx.state.user.id;
+        }
+
     },
     beforeUpdate(event) {
         const { data } = event.params;

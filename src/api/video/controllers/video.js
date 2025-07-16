@@ -10,7 +10,6 @@ module.exports = createCoreController('api::video.video', ({ strapi }) => ({
     async findOne(ctx) {
         try {
             const { id } = ctx.params;
-            console.log("Document ID:", id);
             const userId = ctx.state.user.id;
             const { query } = ctx;
             // Fetch the video entry with quiz progresses

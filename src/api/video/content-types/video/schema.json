@@ -10,12 +10,15 @@
   "options": {
     "draftAndPublish": false
   },
+  "pluginOptions": {},
   "attributes": {
     "name": {
-      "type": "string"
+      "type": "string",
+      "required": true
     },
     "video_url": {
-      "type": "string"
+      "type": "string",
+      "required": true
     },
     "quizzes": {
       "type": "relation",
@@ -34,6 +37,10 @@
       "relation": "oneToMany",
       "target": "api::quiz-progress.quiz-progress",
       "mappedBy": "video"
+    },
+    "description": {
+      "type": "text",
+      "required": true
     }
   }
 }

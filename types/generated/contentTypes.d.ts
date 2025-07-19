@@ -730,6 +730,7 @@ export interface ApiVideoVideo extends Struct.CollectionTypeSchema {
     >;
     quizzes: Schema.Attribute.Relation<'oneToMany', 'api::quiz.quiz'>;
     subject: Schema.Attribute.Relation<'manyToOne', 'api::subject.subject'>;
+    thumbnail_url: Schema.Attribute.String & Schema.Attribute.Required;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
